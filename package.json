@@ -12,12 +12,16 @@
     "dev:admin": "npm run dev --workspace=@juris/admin",
     "dev:mobile": "npm run start --workspace=@juris/mobile",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "build": "npm run build --workspaces --if-present",
+    "build": "npm run build:admin && npm run build:types && npm run build:validation && npm run build:api",
+    "build:admin": "npm run build --workspace=@juris/admin",
+    "build:types": "npm run build --workspace=@juris/types",
+    "build:validation": "npm run build --workspace=@juris/validation",
+    "build:api": "npm run build --workspace=@juris/api",
     "db:generate": "npm run generate --workspace=@juris/database",
     "db:migrate": "npm run migrate --workspace=@juris/database",
     "db:migrate:deploy": "npm run migrate:deploy --workspace=@juris/database",
     "db:seed": "npm run seed --workspace=@juris/database",
-    "build:api:deploy": "npm run db:generate && npm run build --workspace=@juris/api"
+    "build:api:deploy": "npm run db:generate && npm run build:types && npm run build:validation && npm run build:api"
   },
   "devDependencies": {
     "react": "19.2.3",
