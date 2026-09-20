@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "Juris Prudentia",
+    "slug": "juris-prudentia",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.jurisprudentia.app"
+    },
+    "android": {
+      "package": "com.jurisprudentia.app"
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-status-bar",
+      "expo-secure-store"
+    ]
+  }
+}

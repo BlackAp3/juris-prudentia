@@ -1,0 +1,26 @@
+{
+  "name": "juris-prudentia",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": ["apps/*", "packages/*"],
+  "overrides": {
+    "react": "19.2.3",
+    "react-dom": "19.2.3"
+  },
+  "scripts": {
+    "dev:api": "npm run dev --workspace=@juris/api",
+    "dev:admin": "npm run dev --workspace=@juris/admin",
+    "dev:mobile": "npm run start --workspace=@juris/mobile",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present",
+    "db:generate": "npm run generate --workspace=@juris/database",
+    "db:migrate": "npm run migrate --workspace=@juris/database",
+    "db:migrate:deploy": "npm run migrate:deploy --workspace=@juris/database",
+    "db:seed": "npm run seed --workspace=@juris/database"
+  },
+  "devDependencies": {
+    "react": "19.2.3",
+    "react-dom": "19.2.3"
+  },
+  "engines": { "node": ">=20" }
+}

@@ -1,0 +1,8 @@
+node_modules
+.next
+.expo
+dist
+.env
+*.log
+*.tsbuildinfo
+packages/database/prisma/dev.db
