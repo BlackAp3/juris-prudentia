@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./styles.css";
+import { AdminGuard } from "./AdminGuard";
 
 export const metadata: Metadata = {
   title: "Juris Prudentia Admin",
@@ -9,7 +10,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body><AdminGuard>{children}</AdminGuard></body>
     </html>
   );
 }
