@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { ProfileMenu } from "./ProfileMenu";
 
 const nav = [
   ["Overview", "/", "⌂"], ["Courses", "/courses", "▤"], ["Cases & statutes", "/cases", "⚖"], ["News", "/news", "◫"], ["Community", "/community", "☁"], ["Users", "/users", "◎"], ["Reports", "/reports", "▥"], ["Settings", "/settings", "⚙"],
@@ -7,7 +8,7 @@ const nav = [
 
 export function AdminShell({ active, title, description, action, children }: { active: string; title: string; description: string; action?: ReactNode; children: ReactNode }) {
   return <main className="shell">
-    <aside className="sidebar"><Link className="brand" href="/"><span>⚖</span><div>Juris Prudentia<small>Administration</small></div></Link><nav>{nav.map(([label,href,icon]) => <Link className={active === label ? "active" : ""} href={href} key={label}><span>{icon}</span>{label}</Link>)}</nav><div className="admin-profile"><div className="avatar">SN</div><div><strong>Sydney N.</strong><small>Super Administrator</small></div><span>⋮</span></div></aside>
+    <aside className="sidebar"><Link className="brand" href="/"><span>⚖</span><div>Juris Prudentia<small>Administration</small></div></Link><nav>{nav.map(([label,href,icon]) => <Link className={active === label ? "active" : ""} href={href} key={label}><span>{icon}</span>{label}</Link>)}</nav><ProfileMenu /></aside>
     <section className="content"><header className="topbar"><div className="mobile-brand">⚖</div><div className="global-search">⌕ <input placeholder="Search content, users or cases…" /></div><button className="icon-button">◉<i /></button><div className="top-avatar">SN</div></header><div className="page"><div className="page-heading"><div><p className="eyebrow">JURIS PRUDENTIA</p><h1>{title}</h1><p>{description}</p></div>{action}</div>{children}</div></section>
   </main>;
 }
