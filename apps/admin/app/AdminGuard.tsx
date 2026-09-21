@@ -36,6 +36,6 @@ export function AdminGuard({ children }: { children: ReactNode }) {
       });
   }, [pathname, router]);
 
-  if (pathname !== "/login" && !ready) return <main style={{ padding: 40, fontFamily: "Arial, sans-serif" }}>Checking secure access…</main>;
+  if (pathname !== "/login" && !ready) return <main style={{ padding: 40, fontFamily: '"Segoe UI Variable", "Segoe UI", Arial, sans-serif' }}>Checking secure access…</main>;
   return children;
 }
