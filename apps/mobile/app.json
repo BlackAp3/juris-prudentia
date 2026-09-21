@@ -18,6 +18,12 @@
     "plugins": [
       "expo-status-bar",
       "expo-secure-store"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "f57413b9-606b-46a4-9527-8c773c03680a"
+      }
+    },
+    "owner": "blacops"
   }
 }
