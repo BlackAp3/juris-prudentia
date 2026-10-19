@@ -1,3 +1,19 @@
-import { AdminShell, Badge, Button, Card } from "../components";
-const cases = [["R v Larsonneur","[1933] 24 Cr App R 74","Actus Reus","Published"],["R v Cunningham","[1957] 2 QB 396","Mens Rea","Published"],["DPP v Smith","[1961] AC 290","Mens Rea","Review"],["Sweet v Parsley","[1970] AC 132","Strict Liability","Published"],["R v Woollin","[1999] 1 AC 82","Homicide","Draft"]];
-export default function Cases() { return <AdminShell active="Cases & statutes" title="Cases & statutes" description="Maintain the authoritative legal reference library." action={<Button>＋ Add legal authority</Button>}><div className="subnav"><a className="selected">Cases <span>436</span></a><a>Statutes <span>58</span></a><a>Constitution <span>1</span></a></div><div className="toolbar"><div className="search-box">⌕ <input placeholder="Search title, citation or principle…" /></div><select><option>All courses</option><option>Criminal Law I</option></select><select><option>All statuses</option></select></div><Card className="table-card"><table><thead><tr><th>Case</th><th>Topic</th><th>Linked course</th><th>Status</th><th>Updated</th><th /></tr></thead><tbody>{cases.map(([title,citation,topic,status]) => <tr key={title}><td><div className="authority"><span>⚖</span><div><strong>{title}</strong><small>{citation}</small></div></div></td><td><Badge tone="blue">{topic}</Badge></td><td>Criminal Law I</td><td><Badge tone={status === "Published" ? "green" : status === "Review" ? "gold" : "gray"}>{status}</Badge></td><td>19 Sep 2026</td><td><button className="more">⋮</button></td></tr>)}</tbody></table></Card></AdminShell>; }
+"use client";
+
+import { useEffect, useState } from "react";
+import { adminFetch } from "../admin-api";
+import { AdminShell, Badge, Card } from "../components";
+
+type LegalCase = { id: string; title: string; citation: string; principle: string; status: string; updatedAt: string; topic: { title: string; course: { title: string } } };
+type CaseData = { cases: LegalCase[]; counts: { cases: number; publishedCases: number; statutes: number; constitution: number } };
+
+export default function Cases() {
+  const [data, setData] = useState<CaseData | null>(null);
+  const [query, setQuery] = useState("");
+  const [status, setStatus] = useState("all");
+  const [error, setError] = useState("");
+  useEffect(() => { adminFetch<CaseData>("/admin/cases").then(setData).catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "Unable to load authorities")); }, []);
+  const cases = data?.cases.filter((item) => `${item.title} ${item.citation} ${item.principle}`.toLowerCase().includes(query.toLowerCase()) && (status === "all" || item.status === status)) ?? [];
+  const statuses = [...new Set(data?.cases.map((item) => item.status) ?? [])];
+  return <AdminShell active="Cases & statutes" title="Cases & statutes" description="Legal authorities currently stored in the database."><>{error && <p className="error-banner">{error}</p>}<div className="subnav"><a className="selected">Cases <span>{data?.counts.cases ?? "—"}</span></a><a>Statutes <span>{data?.counts.statutes ?? "—"}</span></a><a>Constitution <span>{data?.counts.constitution ?? "—"}</span></a></div><div className="toolbar"><div className="search-box"><span className="search-icon">⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search title, citation or principle…" /></div><select value={status} onChange={(event) => setStatus(event.target.value)}><option value="all">All statuses</option>{statuses.map((item) => <option value={item} key={item}>{item}</option>)}</select></div><Card className="table-card"><table><thead><tr><th>Case</th><th>Topic</th><th>Linked course</th><th>Status</th><th>Updated</th></tr></thead><tbody>{cases.length ? cases.map((item) => <tr key={item.id}><td><div className="authority"><span>⚖</span><div><strong>{item.title}</strong><small>{item.citation}</small></div></div></td><td><Badge tone="blue">{item.topic.title}</Badge></td><td>{item.topic.course.title}</td><td><Badge tone={item.status === "PUBLISHED" ? "green" : item.status === "DRAFT" ? "gold" : "gray"}>{item.status}</Badge></td><td>{new Date(item.updatedAt).toLocaleDateString()}</td></tr>) : <tr><td colSpan={5} className="empty-table">No legal cases are stored in the database.</td></tr>}</tbody></table></Card></></AdminShell>;
+}

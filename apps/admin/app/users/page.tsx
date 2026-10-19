@@ -1,3 +1,19 @@
-import { AdminShell, Badge, Button, Card, Metric } from "../components";
-const users = [["Alex Chen","alex.chen@example.com","Student","Makerere University","Active"],["Maria Ssemakula","maria.s@example.com","Moderator","Juris Prudentia","Active"],["John Doe","john.d@example.com","Student","Uganda Christian University","Pending"],["Amina Nakato","amina.n@example.com","Content Editor","Juris Prudentia","Active"]];
-export default function Users() { return <AdminShell active="Users" title="Users" description="Manage students, editors, moderators and administrators." action={<Button>＋ Invite user</Button>}><div className="metrics compact"><Metric label="Total users" value="1,326" detail="1,248 active" icon="◎" /><Metric label="New this month" value="84" detail="↑ 12%" icon="＋" /><Metric label="Pending verification" value="12" detail="Review required" icon="◌" /></div><div className="toolbar"><div className="search-box">⌕ <input placeholder="Search users…" /></div><select><option>All roles</option></select><select><option>All universities</option></select></div><Card className="table-card"><table><thead><tr><th>User</th><th>Role</th><th>Institution</th><th>Status</th><th>Joined</th><th /></tr></thead><tbody>{users.map(([name,email,role,institution,status]) => <tr key={email}><td><div className="user-cell"><span>{name.split(" ").map((part) => part[0]).join("")}</span><div><strong>{name}</strong><small>{email}</small></div></div></td><td><Badge tone={role === "Student" ? "blue" : "gold"}>{role}</Badge></td><td>{institution}</td><td><Badge tone={status === "Active" ? "green" : "gold"}>{status}</Badge></td><td>Sep 2026</td><td><button className="more">⋮</button></td></tr>)}</tbody></table></Card></AdminShell>; }
+"use client";
+
+import { useEffect, useState } from "react";
+import { adminFetch } from "../admin-api";
+import { AdminShell, Badge, Card, Metric } from "../components";
+
+type User = { id: string; fullName: string; email: string; role: string; isActive: boolean; createdAt: string };
+type UserData = { users: User[]; counts: { total: number; active: number; newUsers: number; pendingVerification: number } };
+
+export default function Users() {
+  const [data, setData] = useState<UserData | null>(null);
+  const [query, setQuery] = useState("");
+  const [role, setRole] = useState("all");
+  const [error, setError] = useState("");
+  useEffect(() => { adminFetch<UserData>("/admin/users").then(setData).catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "Unable to load users")); }, []);
+  const users = data?.users.filter((user) => `${user.fullName} ${user.email}`.toLowerCase().includes(query.toLowerCase()) && (role === "all" || user.role === role)) ?? [];
+  const roles = [...new Set(data?.users.map((user) => user.role) ?? [])];
+  return <AdminShell active="Users" title="Users" description="User accounts currently stored in the database."><>{error && <p className="error-banner">{error}</p>}<div className="metrics compact"><Metric label="Total users" value={data ? String(data.counts.total) : "—"} detail={data ? `${data.counts.active} active` : "Loading database records"} icon="◎" /><Metric label="New this month" value={data ? String(data.counts.newUsers) : "—"} detail="Created this month" icon="＋" /><Metric label="Pending verification" value="0" detail="No verification field stored" icon="◌" /></div><div className="toolbar"><div className="search-box"><span className="search-icon">⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search users…" /></div><select value={role} onChange={(event) => setRole(event.target.value)}><option value="all">All roles</option>{roles.map((item) => <option value={item} key={item}>{item}</option>)}</select></div><Card className="table-card"><table><thead><tr><th>User</th><th>Role</th><th>Status</th><th>Joined</th></tr></thead><tbody>{users.length ? users.map((user) => <tr key={user.id}><td><div className="user-cell"><span>{user.fullName.split(" ").map((part) => part[0]).join("").slice(0, 2)}</span><div><strong>{user.fullName}</strong><small>{user.email}</small></div></div></td><td><Badge tone={user.role === "STUDENT" ? "blue" : "gold"}>{user.role.replaceAll("_", " ")}</Badge></td><td><Badge tone={user.isActive ? "green" : "gray"}>{user.isActive ? "Active" : "Inactive"}</Badge></td><td>{new Date(user.createdAt).toLocaleDateString()}</td></tr>) : <tr><td colSpan={4} className="empty-table">No users are stored in the database.</td></tr>}</tbody></table></Card></></AdminShell>;
+}

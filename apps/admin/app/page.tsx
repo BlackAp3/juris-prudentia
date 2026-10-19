@@ -1,9 +1,31 @@
-import { AdminShell, Badge, Button, Card, Metric, Progress } from "./components";
+"use client";
+
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { adminFetch } from "./admin-api";
+import { AdminShell, Badge, Card, Metric, Progress } from "./components";
+
+type OverviewData = {
+  counts: Record<string, number>;
+  progress: Array<{ label: string; current: number; total: number }>;
+  recentContent: Array<{ title: string; subtitle: string; type: string; status: string; updatedAt: string }>;
+  attention: Array<{ title: string; detail: string; count: number }>;
+  activity: Array<{ label: string; value: number }>;
+};
 
 export default function Overview() {
-  return <AdminShell active="Overview" title="Good evening, Sydney" description="Here is what is happening across the learning platform." action={<Button>＋ Add content</Button>}>
-    <div className="metrics"><Metric label="Active students" value="1,248" detail="↑ 8.2% this month" icon="◎" /><Metric label="Published courses" value="18" detail="6 drafts awaiting review" icon="▤" /><Metric label="Cases in library" value="436" detail="21 added this month" icon="⚖" /><Metric label="Open reports" value="7" detail="3 need priority review" icon="!" /></div>
-    <div className="grid two"><Card title="Content overview" action={<a>View report →</a>}><div className="progress-item"><div><span>Courses published</span><b>18 / 24</b></div><Progress value={75} /></div><div className="progress-item"><div><span>Cases reviewed</span><b>436 / 510</b></div><Progress value={85} /></div><div className="progress-item"><div><span>Notes published</span><b>92 / 120</b></div><Progress value={77} /></div><div className="progress-item"><div><span>Statutes indexed</span><b>58 / 62</b></div><Progress value={94} /></div></Card><Card title="Items requiring attention" action={<Badge tone="red">7 OPEN</Badge>}><ul className="activity"><li><span className="activity-icon warning">!</span><div><strong>3 community reports</strong><small>Awaiting moderator review</small></div><time>Today</time></li><li><span className="activity-icon">▤</span><div><strong>Evidence Law notes</strong><small>Submitted for approval</small></div><time>2h</time></li><li><span className="activity-icon">◎</span><div><strong>12 student registrations</strong><small>University verification pending</small></div><time>4h</time></li><li><span className="activity-icon">◫</span><div><strong>Judiciary update</strong><small>Scheduled for tomorrow</small></div><time>6h</time></li></ul></Card></div>
-    <div className="grid two wide-left"><Card title="Recent content"><table><thead><tr><th>Content</th><th>Type</th><th>Editor</th><th>Status</th></tr></thead><tbody><tr><td><strong>Elements of a Crime</strong><small>Criminal Law I</small></td><td>Topic note</td><td>Maria S.</td><td><Badge tone="green">Published</Badge></td></tr><tr><td><strong>R v Woollin</strong><small>Criminal Law I</small></td><td>Case</td><td>John K.</td><td><Badge tone="gold">Review</Badge></td></tr><tr><td><strong>Electronic Evidence</strong><small>Evidence Law I</small></td><td>News</td><td>Amina N.</td><td><Badge tone="blue">Scheduled</Badge></td></tr></tbody></table></Card><Card title="Platform activity"><div className="chart"><div style={{height:"42%"}} /><div style={{height:"60%"}} /><div style={{height:"48%"}} /><div style={{height:"73%"}} /><div style={{height:"64%"}} /><div style={{height:"88%"}} /><div style={{height:"76%"}} /></div><div className="chart-labels"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div></Card></div>
+  const [data, setData] = useState<OverviewData | null>(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    adminFetch<OverviewData>("/admin/overview").then(setData).catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "Unable to load overview"));
+  }, []);
+
+  const counts = data?.counts;
+  return <AdminShell active="Overview" title="Platform overview" description="Live information from your Juris Prudentia database." action={<Link className="button" href="/content">＋ Add content</Link>}>
+    {error && <p className="error-banner">{error}</p>}
+    <div className="metrics"><Metric label="Active users" value={counts ? String(counts.activeUsers) : "—"} detail={counts ? `${counts.users} total users` : "Loading database records"} icon="◎" /><Metric label="Published courses" value={counts ? String(counts.publishedCourses) : "—"} detail={counts ? `${counts.courses} total courses` : "Loading database records"} icon="▤" /><Metric label="Published cases" value={counts ? String(counts.publishedCases) : "—"} detail={counts ? `${counts.cases} total cases` : "Loading database records"} icon="⚖" /><Metric label="Open reports" value="0" detail="No report records stored" icon="!" /></div>
+    <div className="grid two"><Card title="Content overview"><div className="progress-list">{data?.progress.length ? data.progress.map((item) => <div className="progress-item" key={item.label}><div><span>{item.label}</span><b>{item.current} / {item.total}</b></div><Progress value={item.total ? (item.current / item.total) * 100 : 0} /></div>) : <p className="empty-state">No content records are available yet.</p>}</div></Card><Card title="Items requiring attention" action={<Badge tone="red">{data?.attention.reduce((sum, item) => sum + item.count, 0) ?? 0} OPEN</Badge>}><ul className="activity">{data?.attention.length ? data.attention.map((item) => <li key={item.title}><span className="activity-icon warning">!</span><div><strong>{item.title}</strong><small>{item.detail}</small></div><time>{item.count}</time></li>) : <li className="empty-state">No attention items are stored.</li>}</ul></Card></div>
+    <div className="grid two wide-left"><Card title="Recent content"><table><thead><tr><th>Content</th><th>Type</th><th>Status</th><th>Updated</th></tr></thead><tbody>{data?.recentContent.length ? data.recentContent.map((item) => <tr key={`${item.type}-${item.title}`}><td><strong>{item.title}</strong><small>{item.subtitle}</small></td><td>{item.type}</td><td><Badge tone={item.status === "Published" ? "green" : item.status === "Draft" ? "gold" : "gray"}>{item.status}</Badge></td><td>{new Date(item.updatedAt).toLocaleDateString()}</td></tr>) : <tr><td colSpan={4} className="empty-table">No content records are stored yet.</td></tr>}</tbody></table></Card><Card title="Platform activity">{data?.activity.length ? <div className="chart">{data.activity.map((item) => <div key={item.label} style={{ height: `${item.value}%` }} />)}</div> : <p className="empty-state">Activity history is not stored yet.</p>}</Card></div>
   </AdminShell>;
 }

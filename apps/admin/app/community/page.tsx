@@ -1,3 +1,14 @@
-import { AdminShell, Badge, Button, Card, Metric } from "../components";
-const reports = [["Uncivil language in discussion","Mens rea for attempted murder","Harassment","High"],["Possible answer sharing","Quiz preparation group","Academic integrity","Medium"],["Off-topic promotion","Burden of proof thread","Spam","Low"]];
-export default function Community() { return <AdminShell active="Community" title="Community moderation" description="Keep student discussions useful, respectful and safe." action={<Button>Community settings</Button>}><div className="metrics compact"><Metric label="Open reports" value="7" detail="3 high priority" icon="!" /><Metric label="Active threads" value="184" detail="+12 this week" icon="☁" /><Metric label="Resolved this month" value="46" detail="Median: 2.4 hours" icon="✓" /></div><div className="subnav"><a className="selected">Reports <span>7</span></a><a>Recent discussions</a><a>Moderation log</a></div><Card title="Reports requiring review" className="table-card"><table><thead><tr><th>Report</th><th>Discussion</th><th>Category</th><th>Priority</th><th /></tr></thead><tbody>{reports.map(([report,thread,category,priority]) => <tr key={report}><td><strong>{report}</strong><small>Reported 32 minutes ago</small></td><td>{thread}<small>Criminal Law I</small></td><td>{category}</td><td><Badge tone={priority === "High" ? "red" : priority === "Medium" ? "gold" : "gray"}>{priority}</Badge></td><td><Button secondary>Review</Button></td></tr>)}</tbody></table></Card></AdminShell>; }
+"use client";
+
+import { useEffect, useState } from "react";
+import { adminFetch } from "../admin-api";
+import { AdminShell, Badge, Card, Metric } from "../components";
+
+type CommunityData = { counts: { openReports: number; activeThreads: number; replies: number }; reports: Array<{ id: string }>; };
+
+export default function Community() {
+  const [data, setData] = useState<CommunityData | null>(null);
+  const [error, setError] = useState("");
+  useEffect(() => { adminFetch<CommunityData>("/admin/community").then(setData).catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "Unable to load community data")); }, []);
+  return <AdminShell active="Community" title="Community moderation" description="Moderation data currently stored in the database."><>{error && <p className="error-banner">{error}</p>}<div className="metrics compact"><Metric label="Open reports" value={String(data?.counts.openReports ?? 0)} detail="No report records stored" icon="!" /><Metric label="Active threads" value={data ? String(data.counts.activeThreads) : "—"} detail="Open questions" icon="☁" /><Metric label="Replies" value={data ? String(data.counts.replies) : "—"} detail="Stored community replies" icon="✓" /></div><div className="subnav"><a className="selected">Reports <span>{data?.counts.openReports ?? 0}</span></a><a>Recent discussions</a></div><Card title="Reports requiring review" className="table-card"><table><thead><tr><th>Report</th><th>Status</th></tr></thead><tbody>{data?.reports.length ? data.reports.map((report) => <tr key={report.id}><td>{report.id}</td><td><Badge tone="gold">Stored</Badge></td></tr>) : <tr><td colSpan={2} className="empty-table">No moderation reports are stored because this database has no report records yet.</td></tr>}</tbody></table></Card></></AdminShell>;
+}

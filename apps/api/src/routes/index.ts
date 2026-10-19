@@ -1,36 +1,17 @@
 import { Router } from "express";
-import type { ApiResponse, CourseSummary } from "@juris/types";
 import { authRouter } from "./auth.js";
 import { contentRouter } from "./content.js";
+import { adminRouter } from "./admin.js";
+import { prisma } from "../auth.js";
 import { requireAuth } from "../middleware/auth.js";
 
 export const apiRouter = Router();
 
 apiRouter.use("/auth", authRouter);
 apiRouter.use("/content", contentRouter);
+apiRouter.use("/admin", adminRouter);
 
-const sampleCourses: CourseSummary[] = [
-  {
-    id: "criminal-law-1",
-    code: "LAW 2101",
-    title: "Criminal Law I",
-    academicYear: 2,
-    semester: 1,
-    topicCount: 7,
-    completedTopicCount: 3,
-  },
-  {
-    id: "evidence-law-1",
-    code: "LAW 2102",
-    title: "Evidence Law I",
-    academicYear: 2,
-    semester: 1,
-    topicCount: 6,
-    completedTopicCount: 1,
-  },
-];
-
-apiRouter.get("/courses", requireAuth, (_request, response) => {
-  const payload: ApiResponse<CourseSummary[]> = { data: sampleCourses };
-  response.json(payload);
+apiRouter.get("/courses", requireAuth, async (request, response) => {
+  const courses = await prisma.course.findMany({ orderBy: { title: "asc" }, include: { topics: { select: { id: true } }, enrollments: { where: { userId: request.authUser!.sub }, select: { completedTopicIds: true } } } });
+  response.json({ data: courses.map((course) => ({ id: course.id, code: course.code, title: course.title, academicYear: course.academicYear, semester: course.semester, topicCount: course.topics.length, completedTopicCount: course.enrollments.reduce((sum, enrollment) => sum + enrollment.completedTopicIds.filter((id) => course.topics.some((topic) => topic.id === id)).length, 0) })) });
 });
