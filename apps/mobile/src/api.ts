@@ -7,7 +7,7 @@ export type AuthResponse = {
   refreshToken: string;
 };
 
-const apiBaseUrl = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
+const apiBaseUrl = "https://juris-prudentia-production.up.railway.app/api/v1";
 let accessToken: string | null = null;
 const refreshTokenKey = "juris.refreshToken";
 

@@ -21,6 +21,16 @@ enum ContentStatus {
   ARCHIVED
 }
 
+enum ContentBlockType {
+  HEADING
+  PARAGRAPH
+  BULLET_LIST
+  QUOTE
+  CASE
+  STATUTE
+  CITATION
+}
+
 model User {
   id           String       @id @default(uuid())
   fullName     String
@@ -66,18 +76,48 @@ model Course {
 }
 
 model Topic {
-  id        String        @id @default(uuid())
-  courseId  String
-  course    Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  title     String
-  position  Int
-  notes     Note[]
-  cases     LegalCase[]
-  statutes  Statute[]
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
+  id           String         @id @default(uuid())
+  courseId     String
+  course       Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title        String
+  position     Int
+  status       ContentStatus  @default(DRAFT)
+  sourceFile   String?
+  notes        Note[]
+  cases        LegalCase[]
+  statutes     Statute[]
+  sections     TopicSection[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
 
   @@unique([courseId, position])
+}
+
+model TopicSection {
+  id        String               @id @default(uuid())
+  topicId   String
+  topic     Topic                @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  title     String
+  position  Int
+  blocks    TopicContentBlock[]
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+
+  @@unique([topicId, position])
+}
+
+model TopicContentBlock {
+  id         String          @id @default(uuid())
+  sectionId  String
+  section    TopicSection    @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  type       ContentBlockType
+  position   Int
+  text       String
+  citation   String?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  @@unique([sectionId, position])
 }
 
 model Note {

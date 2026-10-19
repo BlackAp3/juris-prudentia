@@ -22,7 +22,7 @@ import {
   WelcomeScreen,
 } from "./src/screens";
 import { colors } from "./src/theme";
-import { restoreSession } from "./src/api";
+import { logout, restoreSession } from "./src/api";
 
 export type ScreenKey =
   | "welcome"
@@ -71,6 +71,12 @@ export default function App() {
     setScreen(next);
   };
 
+  const handleSignOut = async () => {
+    await logout();
+    setHistory([]);
+    setScreen("login");
+  };
+
   const screens: Record<ScreenKey, React.ReactNode> = {
     welcome: <WelcomeScreen navigate={navigate} />,
     login: <LoginScreen navigate={navigate} goBack={goBack} />,
@@ -88,7 +94,7 @@ export default function App() {
     progress: <ProgressScreen navigate={navigate} />,
     notifications: <NotificationsScreen goBack={goBack} />,
     search: <SearchScreen navigate={navigate} goBack={goBack} />,
-    profile: <ProfileScreen />,
+    profile: <ProfileScreen onSignOut={handleSignOut} />,
   };
 
   return (

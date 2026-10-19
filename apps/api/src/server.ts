@@ -11,7 +11,7 @@ const configuredOrigins = process.env.WEB_ORIGINS?.split(",").map((origin) => or
 
 app.use(helmet());
 app.use(cors({ origin: configuredOrigins?.length ? configuredOrigins : true, credentials: true }));
-app.use(express.json({ limit: "1mb" }));
+app.use(express.json({ limit: "12mb" }));
 
 app.get("/health", (_request, response) => {
   response.json({ status: "ok", service: "juris-prudentia-api" });

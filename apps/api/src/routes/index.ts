@@ -1,11 +1,13 @@
 import { Router } from "express";
 import type { ApiResponse, CourseSummary } from "@juris/types";
 import { authRouter } from "./auth.js";
+import { contentRouter } from "./content.js";
 import { requireAuth } from "../middleware/auth.js";
 
 export const apiRouter = Router();
 
 apiRouter.use("/auth", authRouter);
+apiRouter.use("/content", contentRouter);
 
 const sampleCourses: CourseSummary[] = [
   {

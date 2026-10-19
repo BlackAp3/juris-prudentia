@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { ProfileMenu } from "./ProfileMenu";
 
 const nav = [
-  ["Overview", "/", "⌂"], ["Courses", "/courses", "▤"], ["Cases & statutes", "/cases", "⚖"], ["News", "/news", "◫"], ["Community", "/community", "☁"], ["Users", "/users", "◎"], ["Reports", "/reports", "▥"], ["Settings", "/settings", "⚙"],
+  ["Overview", "/", "⌂"], ["Courses", "/courses", "▤"], ["Content Manager", "/content", "✎"], ["Cases & statutes", "/cases", "⚖"], ["News", "/news", "◫"], ["Community", "/community", "☁"], ["Users", "/users", "◎"], ["Reports", "/reports", "▥"], ["Settings", "/settings", "⚙"],
 ] satisfies ReadonlyArray<readonly [string, string, string]>;
 
 export function AdminShell({ active, title, description, action, children }: { active: string; title: string; description: string; action?: ReactNode; children: ReactNode }) {
