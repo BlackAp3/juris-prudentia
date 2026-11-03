@@ -38,8 +38,11 @@ function cleanMarkup(value: string) {
   return decodeEntities(value.replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim();
 }
 
-function citationFrom(text: string) {
-  return text.match(/[[(]\d{4}[\])].*$/)?.[0]?.trim() ?? text;
+/** Splits "R v Woollin [1999] 1 AC 82" into the case name and its citation. */
+function splitCase(text: string) {
+  const citation = text.match(/[[(]\d{4}[\])].*$/)?.[0]?.trim();
+  const name = citation ? text.slice(0, text.length - citation.length).trim().replace(/[,;]$/, "") : "";
+  return name && citation ? { text: name, citation } : { text };
 }
 
 /** Turns Mammoth HTML into sections using Word structure only — the same rules for every course. */
@@ -84,14 +87,14 @@ function parseHtml(html: string) {
     if (tag.startsWith("h")) { current.blocks.push({ type: ContentBlockType.HEADING, text }); continue; }
     if (tag === "ul" || tag === "ol") { current.blocks.push({ type: ContentBlockType.BULLET_LIST, text }); continue; }
     if (tag === "blockquote") { current.blocks.push({ type: ContentBlockType.QUOTE, text }); continue; }
-    if (className.includes("jp-case")) { current.blocks.push({ type: ContentBlockType.CASE, text, citation: citationFrom(text) }); continue; }
+    if (className.includes("jp-case")) { current.blocks.push({ type: ContentBlockType.CASE, ...splitCase(text) }); continue; }
     if (className.includes("jp-statute")) { current.blocks.push({ type: ContentBlockType.STATUTE, text }); continue; }
 
     // Untemplated documents: guess, and flag the guess for a reviewer.
     if (text.length < 200 && /^(article|section|regulation|rule)\s+\d/i.test(text)) {
       current.blocks.push({ type: ContentBlockType.STATUTE, text, flagged: "Guessed as a statute from its wording. Check the type." });
     } else if (text.length < 200 && /\sv\.?\s/.test(text) && /[[(]\d{4}[\])]/.test(text)) {
-      current.blocks.push({ type: ContentBlockType.CASE, text, citation: citationFrom(text), flagged: "Guessed as a case from “v” and a year. Check the citation." });
+      current.blocks.push({ type: ContentBlockType.CASE, ...splitCase(text), flagged: "Guessed as a case from “v” and a year. Check the citation." });
     } else {
       current.blocks.push({ type: ContentBlockType.PARAGRAPH, text });
     }
@@ -103,13 +106,15 @@ function parseHtml(html: string) {
   return { suggestedTitle, sections, warnings };
 }
 
-function readSections(value: unknown): { sections: DraftSection[] } | { error: string } {
+function readSections(value: unknown, draft: boolean): { sections: DraftSection[] } | { error: string } {
   if (!Array.isArray(value)) return { error: "Sections are required" };
   const sections: DraftSection[] = [];
   for (const [index, raw] of value.entries()) {
     const section = raw as { title?: unknown; blocks?: unknown };
-    const title = typeof section?.title === "string" ? section.title.trim() : "";
-    if (!title) return { error: `Section ${index + 1} needs a title` };
+    const typed = typeof section?.title === "string" ? section.title.trim() : "";
+    // Drafts autosave while someone is still typing, so an untitled section is allowed until publishing.
+    if (!typed && !draft) return { error: `Section ${index + 1} needs a title` };
+    const title = typed || "Untitled section";
     if (!Array.isArray(section.blocks)) return { error: `Section ${index + 1} has no blocks list` };
     const blocks: DraftBlock[] = [];
     for (const rawBlock of section.blocks) {
@@ -141,9 +146,9 @@ function readTopicBody(value: unknown) {
   const title = typeof body.title === "string" ? body.title.trim() : "";
   if (!courseId) return { error: "Choose a course for this topic" };
   if (!title) return { error: "Give the topic a title" };
-  const parsed = readSections(body.sections);
-  if ("error" in parsed) return parsed;
   const status = body.status === ContentStatus.PUBLISHED ? ContentStatus.PUBLISHED : ContentStatus.DRAFT;
+  const parsed = readSections(body.sections, status === ContentStatus.DRAFT);
+  if ("error" in parsed) return parsed;
   if (status === ContentStatus.PUBLISHED && !parsed.sections.some((section) => section.blocks.length)) return { error: "Add some content before publishing" };
   const sourceFile = typeof body.sourceFile === "string" && body.sourceFile ? body.sourceFile : undefined;
   return { courseId, title, status, sourceFile, sections: parsed.sections };
@@ -169,19 +174,50 @@ contentRouter.get("/topics/:id", requireAuth, async (request, response) => {
   response.json({ data: topic });
 });
 
-contentRouter.post("/courses", requireAuth, editorsOnly, async (request, response) => {
-  const body = (request.body ?? {}) as { code?: unknown; title?: unknown; academicYear?: unknown; semester?: unknown };
+function readCourseBody(value: unknown) {
+  const body = (value ?? {}) as { code?: unknown; title?: unknown; academicYear?: unknown; semester?: unknown };
   const code = typeof body.code === "string" ? body.code.trim().toUpperCase().replace(/\s+/g, " ") : "";
   const title = typeof body.title === "string" ? body.title.trim() : "";
   const academicYear = Number(body.academicYear);
   const semester = Number(body.semester);
-  if (!code || !title) { response.status(400).json({ error: "A course needs a title and a code" }); return; }
-  if (!Number.isInteger(academicYear) || academicYear < 1 || academicYear > 6) { response.status(400).json({ error: "Choose the academic year" }); return; }
-  if (!Number.isInteger(semester) || semester < 1 || semester > 3) { response.status(400).json({ error: "Choose the semester" }); return; }
-  const existing = await prisma.course.findUnique({ where: { code } });
-  if (existing) { response.status(409).json({ error: `Course code ${code} is already used by “${existing.title}”` }); return; }
-  const course = await prisma.course.create({ data: { code, title, academicYear, semester } });
+  if (!code || !title) return { error: "A course needs a title and a code" };
+  if (!Number.isInteger(academicYear) || academicYear < 1 || academicYear > 6) return { error: "Choose the academic year" };
+  if (!Number.isInteger(semester) || semester < 1 || semester > 3) return { error: "Choose the semester" };
+  return { code, title, academicYear, semester };
+}
+
+contentRouter.post("/courses", requireAuth, editorsOnly, async (request, response) => {
+  const input = readCourseBody(request.body);
+  if ("error" in input) { response.status(400).json({ error: input.error }); return; }
+  const existing = await prisma.course.findUnique({ where: { code: input.code } });
+  if (existing) { response.status(409).json({ error: `Course code ${input.code} is already used by “${existing.title}”` }); return; }
+  const course = await prisma.course.create({ data: input });
   response.status(201).json({ data: course });
+});
+
+contentRouter.put("/courses/:id", requireAuth, editorsOnly, async (request, response) => {
+  const courseId = typeof request.params.id === "string" ? request.params.id : "";
+  const input = readCourseBody(request.body);
+  if ("error" in input) { response.status(400).json({ error: input.error }); return; }
+  const [course, clash] = await Promise.all([prisma.course.findUnique({ where: { id: courseId } }), prisma.course.findUnique({ where: { code: input.code } })]);
+  if (!course) { response.status(404).json({ error: "Course not found" }); return; }
+  if (clash && clash.id !== courseId) { response.status(409).json({ error: `Course code ${input.code} is already used by “${clash.title}”` }); return; }
+  response.json({ data: await prisma.course.update({ where: { id: courseId }, data: input }) });
+});
+
+// Sets the teaching order of a course's topics. Positions are unique per course, so move them out of the way first.
+contentRouter.put("/courses/:id/order", requireAuth, editorsOnly, async (request, response) => {
+  const courseId = typeof request.params.id === "string" ? request.params.id : "";
+  const topicIds = (request.body as { topicIds?: unknown } | undefined)?.topicIds;
+  if (!Array.isArray(topicIds) || !topicIds.every((id) => typeof id === "string")) { response.status(400).json({ error: "Send the topic ids in their new order" }); return; }
+  const current = await prisma.topic.findMany({ where: { courseId }, select: { id: true } });
+  const ids = topicIds as string[];
+  if (current.length !== ids.length || !current.every((topic) => ids.includes(topic.id))) { response.status(400).json({ error: "The order must list every topic in this course once" }); return; }
+  await prisma.$transaction([
+    ...ids.map((id, index) => prisma.topic.update({ where: { id }, data: { position: -(index + 1) } })),
+    ...ids.map((id, index) => prisma.topic.update({ where: { id }, data: { position: index + 1 } })),
+  ]);
+  response.json({ data: { topicIds: ids } });
 });
 
 contentRouter.post("/import", requireAuth, editorsOnly, async (request, response) => {

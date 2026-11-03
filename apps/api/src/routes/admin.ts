@@ -56,7 +56,7 @@ adminRouter.get("/courses", requireAuth, adminOnly, async (_request, response) =
   response.json({ data: courses.map((course) => ({ id: course.id, code: course.code, title: course.title, academicYear: course.academicYear, semester: course.semester, status: statusLabel(course.status), topicCount: course.topics.length, enrollmentCount: course.enrollments.length, completionPercent: completion(course.topics, course.enrollments) })) });
 });
 
-const courseWithTopics = async (where: { id?: string; code?: string }) => prisma.course.findUnique({ where: where.id ? { id: where.id } : { code: where.code! }, include: { topics: { orderBy: { position: "asc" }, include: { sections: { select: { id: true } } } }, enrollments: { select: { completedTopicIds: true } } } });
+const courseWithTopics = async (where: { id?: string; code?: string }) => prisma.course.findUnique({ where: where.id ? { id: where.id } : { code: where.code! }, include: { topics: { orderBy: { position: "asc" }, include: { sections: { select: { id: true, blocks: { select: { type: true } } } } } }, enrollments: { select: { completedTopicIds: true } } } });
 
 adminRouter.get("/courses/by-code/:code", requireAuth, adminOnly, async (request, response) => {
   const code = typeof request.params.code === "string" ? request.params.code : "";
