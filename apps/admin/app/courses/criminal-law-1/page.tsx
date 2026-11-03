@@ -1,5 +1,6 @@
-import { CourseEditor } from "../CourseEditor";
+import { redirect } from "next/navigation";
 
+// Old hardcoded Criminal Law route. Courses are opened by id from /courses now.
 export default function LegacyCourseEditor() {
-  return <CourseEditor courseId="LAW 2101" />;
+  redirect("/courses");
 }
